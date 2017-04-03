@@ -150,7 +150,7 @@ The following table provides an overview of the properties a client needs to set
 | Name             | Mandatory | Location                 | Type           | Description |
 | :--------------- | :-------: | :----------------------- | :------------- | :---------- |
 | *device_id*      | yes       | *application-properties* | UTF-8 *string* | MUST contain the ID of the device. |
-| *action*         | yes       | *application-properties* | UTF-8 *string* | MUST contain the value `update`. |
+| *action*         | yes       | *application-properties* | UTF-8 *string* | MUST contain the value `remove`. |
 
 The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object as follows:
 
