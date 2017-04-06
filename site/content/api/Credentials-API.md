@@ -24,6 +24,10 @@ The preconditions for invoking any of the Credential API's operations are as fol
 
 The operations described in the following sections can be used by clients to manage credentials for authenticating devices connected to protocol adapters.
 
+{{% note %}}
+All operations are scoped to the *tenant* specified by the `${tenant_id}` during link establishment. It is therefore not possible to e.g. add credentials for devices of *TENANT_B* if the link has been established for target address `credentials/TENANT_A`.
+{{% /note %}}
+
 ## Add Credentials
 
 Clients use this command to initially *add* credentials for a device that has already been registered with Hono. The credentials to be added may be of arbitrary type. However, [Standard Credential Types]({{< relref "#standard-credential-types" >}}) contains an overview of some common types that are used by Hono's protocol adapters and which may be useful to others as well.
@@ -38,14 +42,13 @@ The following table provides an overview of the properties a client needs to set
 
 | Name             | Mandatory | Location                 | Type            | Description                         |
 | :--------------- | :-------: | :----------------------- | :-------------- | :---------------------------------- |
-| *device_id*      | yes       | *application-properties* | UTF-8 *string*  | MUST contain the ID of the device.  |
-| *action*         | yes       | *application-properties* | UTF-8 *string*  | MUST contain the value `add`.       |
+| *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST contain the value `add`.      |
 
 The request message MUST include payload as defined in [Request Payload]({{< relref "#request-payload" >}}).
 
 **Response Message Format**
 
-A response to an *add credentials* request only contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+A response to an *add credentials* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
 The response message's body is empty. 
 
@@ -54,8 +57,8 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *201* | Created, the credentials have been added successfully. |
-| *409* | Conflict, there already exist credentials with the `type` and `auth-id` provided in the request payload for the *device_id*. |
-| *412* | Precondition Failed, there is no device registered with the given *device_id* within the *tenant_id*. |
+| *409* | Conflict, there already exist credentials with the `type` and `auth-id` for the `device-id` from the payload. |
+| *412* | Precondition Failed, there is no device registered with the given *device-id* within the tenant. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -73,7 +76,7 @@ The following table provides an overview of the properties a client needs to set
 
 | Name             | Mandatory | Location                 | Type            | Description                   |
 | :--------------- | :-------: | :----------------------- | :-------------- | :---------------------------- |
-| *action*         | yes       | *application-properties* | UTF-8 *string*  | MUST contain the value `get`. |
+| *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST contain the value `get`. |
 
 The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object as follows:
 
@@ -88,7 +91,7 @@ The `type` property MUST contain the exact type of credentials to look up. The `
 
 **Response Message Format**
 
-A response to a *get credentials* request only contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+A response to a *get credentials* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
 The response message includes payload as defined in [Response Payload]({{< relref "#response-payload" >}}).
 
@@ -115,14 +118,13 @@ The following table provides an overview of the properties a client needs to set
 
 | Name             | Mandatory | Location                 | Type           | Description |
 | :--------------- | :-------: | :----------------------- | :------------- | :---------- |
-| *device_id*      | yes       | *application-properties* | UTF-8 *string* | MUST contain the ID of the device. |
-| *action*         | yes       | *application-properties* | UTF-8 *string* | MUST contain the value `update`. |
+| *subject*        | yes       | *properties*             | UTF-8 *string* | MUST contain the value `update`. |
 
 The request message MUST contain payload as defined in [Request Payload]({{< relref "#request-payload" >}}).
 
 **Response Message Format**
 
-A response to an *update credentials* request only contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+A response to an *update credentials* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
 The response message's body is empty. 
 
@@ -131,7 +133,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *204* | No Content, the credentials have been updated successfully. |
-| *404* | Not Found, there are no credentials registered matching the critera. |
+| *404* | Not Found, there are no credentials registered matching the critera from the payload. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -149,23 +151,25 @@ The following table provides an overview of the properties a client needs to set
 
 | Name             | Mandatory | Location                 | Type           | Description |
 | :--------------- | :-------: | :----------------------- | :------------- | :---------- |
-| *device_id*      | yes       | *application-properties* | UTF-8 *string* | MUST contain the ID of the device. |
-| *action*         | yes       | *application-properties* | UTF-8 *string* | MUST contain the value `remove`. |
+| *subject*        | yes       | *properties*             | UTF-8 *string* | MUST contain the value `remove`. |
 
 The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object as follows:
 
 ~~~json
 {
+  "device-id": "${device_id}",
   "type": "${credential_type}",
   "auth-id": "${authentication_identifier}"
 }
 ~~~
 
-The `type` property MUST contain the exact type of credentials to remove. The `auth-id` property MUST contain the authentication identifier to remove the credentials for.
+The `device-id` property MUST contain the ID of the device from which the credentials should be removed.
+The `tpye` property indicates the type of credentials to remove. If set to `*` then all credentials of the device are removed (`auth-id` is ignored), otherwise only the credentials matching the `type` and `auth-id` are removed.
+The `auth-id` property is optional and if omitted, then all credentials of the specified `type` are removed.
 
 **Response Message Format**
 
-A response to a *remove credentials* request only contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
+A response to a *remove credentials* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
 
 The response message's body is empty.
 
@@ -174,7 +178,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *204* | No Content, the credentials have been removed successfully. |
-| *404* | Not Found, there are no credentials registered matching the critera. |
+| *404* | Not Found, there are no credentials registered matching the critera given in the request payload. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 
@@ -227,17 +231,19 @@ The JSON object MUST contain at least the following members:
 
 | Name             | Mandatory | Type       | Description |
 | :--------------- | :-------: | :--------- | :---------- |
+| *device-id*      | *yes*     | *string*   | The ID of the device to which the credentials belong. |
 | *type*           | *yes*     | *string*   | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The identity that the device should be authenticated as. |
 
-For each set of credentials the combination of `auth-id´ and `type` MUST be unique within a tenant.
+For each set of credentials the combination of `auth-id` and `type` MUST be unique within a tenant.
 
 The JSON object MAY contain additional members of arbitrary other names which MUST be of a scalar type only.
 
-Below is an example for a payload of a request for adding [a hashed password]({{< ref "#hashed-password" >}}) for username `billie` using SHA256 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`):
+Below is an example for a payload of a request for adding [a hashed password]({{< ref "#hashed-password" >}}) for username `billie` using SHA256 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`) to device `4711`:
 
 ~~~json
 {
+  "device-id": "4711",
   "type": "hashed-password",
   "auth-id": "billie",
   "pwd-hash": "AQIDBAUGBwg=",
@@ -255,6 +261,7 @@ Below is an example of the resulting payload for a *get* request for `hashed-pas
 
 ~~~json
 {
+  "device-id": "4711",
   "type": "hashed-password",
   "auth-id": "billie",
   "pwd-hash": "AQIDBAUGBwg=",
