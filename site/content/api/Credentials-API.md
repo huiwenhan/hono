@@ -6,7 +6,7 @@ weight = 435
 The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the storage, look up and deletion of *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
 <!--more-->
 
-Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *logical* ID the device has been registered with using Hono's [Registration API]({{< ref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *logical* device ID.
+Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *logical* ID the device has been registered with using Hono's [Device Registration API]({{< ref "api/Device-Registration-API.md" >}}). Multiple sets of credentials (including arbitrary *authentication identities*) can be registered for each *logical* device ID.
 
 Note, however, that in real world applications the device credentials will probably be managed by a dedicated identity management system. In such a case an implementation of Hono's Credentials API can be created which maps the AMQP 1.0 based API calls to the identity management system's (remote) API.
 
@@ -78,16 +78,21 @@ The following table provides an overview of the properties a client needs to set
 | :--------------- | :-------: | :----------------------- | :-------------- | :---------------------------- |
 | *subject*        | yes       | *properties*             | UTF-8 *string*  | MUST contain the value `get`. |
 
-The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object as follows:
+The body of the message MUST consist of a single *AMQP Value* section containing a UTF-8 encoded string representation of a single JSON object having the following members:
+
+| Name             | Mandatory | Type       | Description |
+| :--------------- | :-------: | :--------- | :---------- |
+| *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
+| *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
+
+The following request payload may be used to look up the hashed password for user `billie`:
 
 ~~~json
 {
-  "type": "${credential_type}",
-  "auth-id": "${authentication_identifier}"
+  "type": "hashed-password",
+  "auth-id": "billie"
 }
 ~~~
-
-The `type` property MUST contain the exact type of credentials to look up. The `auth-id` property MUST contain the authentication identifier to look up credentials for.
 
 **Response Message Format**
 
@@ -164,7 +169,7 @@ The body of the message MUST consist of a single *AMQP Value* section containing
 ~~~
 
 The `device-id` property MUST contain the ID of the device from which the credentials should be removed.
-The `tpye` property indicates the type of credentials to remove. If set to `*` then all credentials of the device are removed (`auth-id` is ignored), otherwise only the credentials matching the `type` and `auth-id` are removed.
+The `type` property indicates the type of credentials to remove. If set to `*` then all credentials of the device are removed (`auth-id` is ignored), otherwise only the credentials matching the `type` and `auth-id` are removed.
 The `auth-id` property is optional and if omitted, then all credentials of the specified `type` are removed.
 
 **Response Message Format**
@@ -239,7 +244,7 @@ For each set of credentials the combination of `auth-id` and `type` MUST be uniq
 
 The JSON object MAY contain additional members of arbitrary other names which MUST be of a scalar type only.
 
-Below is an example for a payload of a request for adding [a hashed password]({{< ref "#hashed-password" >}}) for username `billie` using SHA256 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`) to device `4711`:
+Below is an example for a payload of a request for adding [a hashed password]({{< ref "#hashed-password" >}}) for username `billie` using SHA512 as the hashing function with a 4 byte salt (Base64 encoding of `0x32AEF017`) to device `4711`:
 
 ~~~json
 {
@@ -276,7 +281,7 @@ The following sections define some standard credential types and their propertie
 
 ## Common Properties
 
-All credential types used with Hono MUST contain a `type` and `auth-id` property as defined in [Request Payload]({{< relref "#request-payload" >}}).
+All credential types used with Hono MUST contain a `device-id`, `type` and `auth-id` property as defined in [Request Payload]({{< relref "#request-payload" >}}).
 
 ## Hashed Password
 
@@ -286,6 +291,7 @@ Example:
 
 ~~~json
 {
+  "device-id": "4711",
   "type": "hashed-password",
   "auth-id": "billie",
   "pwd-hash": "AQIDBAUGBwg=",
@@ -296,6 +302,7 @@ Example:
 
 | Name             | Mandatory | Type       | Default   | Description |
 | :--------------- | :-------: | :--------- | :-------- | :---------- |
+| *device-id*      | *yes*     | *string*   |           | The ID of the device to which the credentials belong. |
 | *type*           | *yes*     | *string*   |           | The credential type name, always `hashed-password`. |
 | *auth-id*        | *yes*     | *string*   |           | The *username* |
 | *pwd-hash*       | *yes*     | *string*   |           | The Base64 encoded bytes representing the hashed password. |
@@ -310,14 +317,16 @@ Example:
 
 ~~~json
 {
+  "device-id": "4711",
   "type": "psk",
   "auth-id": "little-sensor",
   "key": "AQIDBAUGBwg="
 }
 ~~~
 
-| Name             | Mandatory | Type       | Default   | Description |
-| :--------------- | :-------: | :--------- | :-------- | :---------- |
-| *type*           | *yes*     | *string*   |           | The credential type name, always `psk`. |
-| *auth-id*        | *yes*     | *string*   |           | The PSK identifier. |
-| *key*            | *yes*     | *string*   |           | The Base64 encoded bytes representing the shared (secret) key. |
+| Name             | Mandatory | Type       | Description |
+| :--------------- | :-------: | :--------- | :---------- |
+| *device-id*      | *yes*     | *string*   | The ID of the device to which the credentials belong. |
+| *type*           | *yes*     | *string*   | The credential type name, always `psk`. |
+| *auth-id*        | *yes*     | *string*   | The PSK identifier. |
+| *key*            | *yes*     | *string*   | The Base64 encoded bytes representing the shared (secret) key. |
