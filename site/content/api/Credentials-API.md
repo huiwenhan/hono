@@ -232,13 +232,16 @@ messages as part of a single *AMQP Value* section.
 
 The payload included in *request* messages consists of a UTF-8 encoded string representation of a single JSON object. It is an error to include payload that is not of this type.
 
-The JSON object MUST contain at least the following members:
+The table below provides an overview of the standard members defined for the JSON object:
 
-| Name             | Mandatory | Type       | Description |
-| :--------------- | :-------: | :--------- | :---------- |
-| *device-id*      | *yes*     | *string*   | The ID of the device to which the credentials belong. |
-| *type*           | *yes*     | *string*   | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
-| *auth-id*        | *yes*     | *string*   | The identity that the device should be authenticated as. |
+| Name             | Mandatory | Type       | Default Value | Description |
+| :--------------- | :-------: | :--------- | :------------ | :---------- |
+| *device-id*      | *yes*     | *string*   |               | The ID of the device to which the credentials belong. |
+| *type*           | *yes*     | *string*   |               | The credential type name. The value may be arbitrarily chosen by clients but SHOULD reflect the particular type of authentication mechanism the credentials are to be used with. Possible values include (but are not limited to) `psk`, `RawPublicKey`, `hashed-password` etc. |
+| *auth-id*        | *yes*     | *string*   |               | The identity that the device should be authenticated as. |
+| *enabled*        | *no*      | *boolean*  | *true*        | Indicates whether the credentials can be used to authenticate devices. **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-before*     | *no*      | *string*   | *null*        | The point in time from which on the credentials can be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
+| *not-after*      | *no*      | *string*   | *null*        | The point in time until which the credentials can be used to authenticate devices. If not *null*, the value MUST be an [ISO 8601 compliant *combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations). **NB** It is up to the discretion of the protocol adapter to make use of this information. |
 
 For each set of credentials the combination of `auth-id` and `type` MUST be unique within a tenant.
 
